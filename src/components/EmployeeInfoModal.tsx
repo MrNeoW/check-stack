@@ -21,29 +21,40 @@ const EmployeeInfoModal: React.FC<EmployeeInfoModalProps> = ({ employee, onClose
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    let filteredValue = value;
+    if (name === 'name') {
+      // Allow only letters and spaces, and capitalize each word
+      filteredValue = value.replace(/[^A-Za-z ]/g, '');
+      filteredValue = filteredValue.replace(/\b\w/g, (char: string) => char.toUpperCase()).replace(/\B\w/g, (char: string) => char.toLowerCase());
+    }
+    if (name === 'lastName') {
+      // Allow only letters and spaces, and capitalize each word
+      filteredValue = value.replace(/[^A-Za-z ]/g, '');
+      filteredValue = filteredValue.replace(/\b\w/g, (char: string) => char.toUpperCase()).replace(/\B\w/g, (char: string) => char.toLowerCase());
+    }
     setLocalEmployee(prev => {
       if (!prev) return prev;
       let updated = {
         ...prev,
-        [name]: type === 'number' ? Number(value) : value
+        [name]: type === 'number' ? Number(filteredValue) : filteredValue
       };
       // Keep firstName and name in sync
       if (name === 'name') {
-        updated.firstName = value;
+        updated.firstName = filteredValue;
       }
       if (name === 'firstName') {
-        updated.name = value;
+        updated.name = filteredValue;
       }
       // Update fullName when name or lastName changes
       if (name === 'name' || name === 'lastName') {
-        updated.fullName = (name === 'name' ? value : updated.name) + ' ' + (name === 'lastName' ? value : updated.lastName);
+        updated.fullName = (name === 'name' ? filteredValue : updated.name) + ' ' + (name === 'lastName' ? filteredValue : updated.lastName);
       }
       if (name === 'salutation') {
-        if (value === 'Mr.') {
+        if (filteredValue === 'Mr.') {
           updated.gender = 'Male';
-        } else if (value === 'Ms.' || value === 'Mrs.') {
+        } else if (filteredValue === 'Ms.' || filteredValue === 'Mrs.') {
           updated.gender = 'Female';
-        } else if (value === 'Mx.') {
+        } else if (filteredValue === 'Mx.') {
           updated.gender = 'Unspecified';
         }
       }
@@ -84,9 +95,27 @@ const EmployeeInfoModal: React.FC<EmployeeInfoModalProps> = ({ employee, onClose
     };
   };
 
+  // Helper to format numbers with spaces
+  function formatNumberWithSpaces(value: number | string) {
+    if (value === '' || value === null || value === undefined) return '';
+    const num = typeof value === 'number' ? value : parseInt(value.toString().replace(/\s/g, ''), 10);
+    if (isNaN(num)) return '';
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  }
+
+  // Custom handler for salary input
+  const handleSalaryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\s/g, '');
+    const num = parseInt(raw, 10);
+    setLocalEmployee(prev => prev ? {
+      ...prev,
+      gsalary: isNaN(num) ? 0 : num
+    } : prev);
+  };
+
   return (
-    <div style={overlayStyle}>
-      <div style={modalStyle}>
+    <div style={bottomSheetOverlayStyle}>
+      <div style={bottomSheetModalStyle}>
         {saving && (
           <div style={{
             position: 'absolute',
@@ -104,13 +133,13 @@ const EmployeeInfoModal: React.FC<EmployeeInfoModalProps> = ({ employee, onClose
           </div>
         )}
         <div style={headerStyle}>
-          <h2>Employee Information</h2>
+          <h2 style={{ margin: 0, flex: 1, textAlign: 'center' }}>Employee Information</h2>
         </div>
-
-        <div style={formStyle}>
-          <div style={formGroupStyle}>
-            <div style={inputGroupStyle}>
-              <label>First Name(s) *</label>
+        <div style={formGridStyle}>
+          {/* Left column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={inputGroupRowStyle}>
+              <label style={labelStyle}>First Name(s) *</label>
               <input 
                 type="text" 
                 name="name"
@@ -120,21 +149,8 @@ const EmployeeInfoModal: React.FC<EmployeeInfoModalProps> = ({ employee, onClose
                 disabled={saving}
               />
             </div>
-            <div style={inputGroupStyle}>
-              <label>Full Name</label>
-              <input 
-                type="text" 
-                name="fullName"
-                value={localEmployee.fullName}
-                style={inputStyle}
-                readOnly
-              />
-            </div>
-          </div>
-
-          <div style={formGroupStyle}>
-            <div style={inputGroupStyle}>
-              <label>Last Name *</label>
+            <div style={inputGroupRowStyle}>
+              <label style={labelStyle}>Last Name *</label>
               <input 
                 type="text" 
                 name="lastName"
@@ -144,22 +160,8 @@ const EmployeeInfoModal: React.FC<EmployeeInfoModalProps> = ({ employee, onClose
                 disabled={saving}
               />
             </div>
-            <div style={inputGroupStyle}>
-              <label>Gross Salary $PY</label>
-              <input 
-                type="number" 
-                name="gsalary"
-                value={localEmployee.gsalary}
-                style={inputStyle}
-                onChange={handleChange}
-                disabled={saving}
-              />
-            </div>
-          </div>
-
-          <div style={formGroupStyle}>
-            <div style={inputGroupStyle}>
-              <label>Salutation *</label>
+            <div style={inputGroupRowStyle}>
+              <label style={labelStyle}>Salutation *</label>
               <select
                 name="salutation"
                 value={localEmployee.salutation}
@@ -174,8 +176,83 @@ const EmployeeInfoModal: React.FC<EmployeeInfoModalProps> = ({ employee, onClose
                 <option value="Mx.">Mx.</option>
               </select>
             </div>
-            <div style={inputGroupStyle}>
-              <label>Employee Profile Colour</label>
+            <div style={inputGroupRowStyle}>
+              <label style={labelStyle}>Gender *</label>
+              <div style={radioGroupStyle}>
+                <label>
+                  <input 
+                    type="radio" 
+                    name="gender"
+                    value="Male"
+                    checked={localEmployee.gender === 'Male'}
+                    onChange={handleRadioChange}
+                    disabled={saving}
+                  />
+                  Male
+                </label>
+                <label>
+                  <input 
+                    type="radio" 
+                    name="gender"
+                    value="Female"
+                    checked={localEmployee.gender === 'Female'}
+                    onChange={handleRadioChange}
+                    disabled={saving}
+                  />
+                  Female
+                </label>
+                <label>
+                  <input 
+                    type="radio" 
+                    name="gender"
+                    value="Unspecified"
+                    checked={localEmployee.gender === 'Unspecified'}
+                    onChange={handleRadioChange}
+                    disabled={saving}
+                  />
+                  Unspecified
+                </label>
+              </div>
+            </div>
+            <div style={inputGroupRowStyle}>
+              <label style={labelStyle}>Employee # *</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input 
+                  type="text" 
+                  name="employeeNumber"
+                  value={localEmployee.employeeNumber}
+                  style={inputStyle}
+                  onChange={handleChange}
+                  disabled={saving}
+                />
+              </div>
+            </div>
+          </div>
+          {/* Right column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={inputGroupRowStyle}>
+              <label style={labelStyle}>Full Name</label>
+              <input 
+                type="text" 
+                name="fullName"
+                value={localEmployee.fullName}
+                style={inputStyle}
+                readOnly
+              />
+            </div>
+            <div style={inputGroupRowStyle}>
+              <label style={labelStyle}>Gross Salary $PY</label>
+              <input 
+                type="text" 
+                name="gsalary"
+                value={formatNumberWithSpaces(localEmployee.gsalary)}
+                style={inputStyle}
+                onChange={handleSalaryChange}
+                disabled={saving}
+              />
+            </div>
+            <div style={inputGroupRowStyle}>
+              <label style={labelStyle}>Employee Profile Colour</label>
               <div style={colorOptionsStyle}>
                 <label>
                   <input 
@@ -222,67 +299,12 @@ const EmployeeInfoModal: React.FC<EmployeeInfoModalProps> = ({ employee, onClose
                   Default
                 </label>
               </div>
-            </div>
-          </div>
-
-          <div style={formGroupStyle}>
-            <div style={inputGroupStyle}>
-              <label>Gender *</label>
-              <div style={radioGroupStyle}>
-                <label>
-                  <input 
-                    type="radio" 
-                    name="gender"
-                    value="Male"
-                    checked={localEmployee.gender === 'Male'}
-                    onChange={handleRadioChange}
-                    disabled={saving}
-                  />
-                  Male
-                </label>
-                <label>
-                  <input 
-                    type="radio" 
-                    name="gender"
-                    value="Female"
-                    checked={localEmployee.gender === 'Female'}
-                    onChange={handleRadioChange}
-                    disabled={saving}
-                  />
-                  Female
-                </label>
-                <label>
-                  <input 
-                    type="radio" 
-                    name="gender"
-                    value="Unspecified"
-                    checked={localEmployee.gender === 'Unspecified'}
-                    onChange={handleRadioChange}
-                    disabled={saving}
-                  />
-                  Unspecified
-                </label>
+              <div style={{ marginTop: 4 }}>
               </div>
             </div>
           </div>
-
-          <div style={formGroupStyle}>
-            <div style={inputGroupStyle}>
-              <label>Employee # *</label>
-              <input 
-                type="text" 
-                name="employeeNumber"
-                value={localEmployee.employeeNumber}
-                style={inputStyle}
-                onChange={handleChange}
-                disabled={saving}
-              />
-              <small style={{ color: '#666' }}>Numeric Only</small>
-            </div>
-          </div>
         </div>
-
-        <div style={footerStyle}>
+        <div style={footerStyleBottomSheet}>
           <button style={cancelButtonStyle} onClick={onClose} disabled={saving}>Cancel</button>
           <button
             style={getSaveButtonStyle()}
@@ -390,6 +412,62 @@ const saveButtonStyle: React.CSSProperties = {
   border: 'none',
   borderRadius: '4px',
   cursor: 'pointer'
+};
+
+// Add new styles for bottom sheet and grid
+const bottomSheetOverlayStyle: React.CSSProperties = {
+  position: 'fixed',
+  left: 0,
+  right: 0,
+  bottom: 0,
+  top: 'auto',
+  backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'flex-end',
+  zIndex: 1000
+};
+
+const bottomSheetModalStyle: React.CSSProperties = {
+  backgroundColor: 'white',
+  padding: '24px 32px 16px 32px',
+  borderRadius: '16px 16px 0 0',
+  width: '100%',
+  maxWidth: '1200px',
+  boxShadow: '0 -2px 16px rgba(0,0,0,0.15)',
+  position: 'relative',
+};
+
+const formGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr',
+  gap: '32px',
+  marginBottom: '24px',
+};
+
+const footerStyleBottomSheet: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'flex-end',
+  alignItems: 'center',
+  gap: '10px',
+  marginTop: '12px',
+  borderTop: '1px solid #eee',
+  paddingTop: '12px',
+};
+
+// Add new row style for input groups and label style
+const inputGroupRowStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: '16px',
+  marginBottom: 0,
+};
+
+const labelStyle: React.CSSProperties = {
+  minWidth: '160px',
+  textAlign: 'right',
+  fontWeight: 500,
 };
 
 export default EmployeeInfoModal; 

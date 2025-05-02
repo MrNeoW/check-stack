@@ -49,7 +49,6 @@ function App() {
 
   const handleSaveEmployee = async (employee: EmployeeDetails) => {
     try {
-      setLoading(true);
       if (modalMode === 'create') {
         await api.post('/api/employees', employee);
       } else if (modalMode === 'update') {
@@ -61,15 +60,25 @@ function App() {
       
     } catch (err) {
       setError('Failed to save employee');
-      setLoading(false);
     }
   };
 
   const handleAddEmployee = async () => {
+    // Find the highest employee number and increment
+    let nextEmployeeNumber = '1';
+    if (employees.length > 0) {
+      // Filter to numeric employee numbers, get max, add 1
+      const maxNum = Math.max(
+        ...employees
+          .map(emp => parseInt(emp.employeeNumber, 10))
+          .filter(num => !isNaN(num))
+      );
+      nextEmployeeNumber = (maxNum + 1).toString();
+    }
     // Create a blank EmployeeDetails object
     const newEmployee: EmployeeDetails = {
       id: -1, // Temporary ID for new employee
-      employeeNumber: '',
+      employeeNumber: nextEmployeeNumber,
       firstName: '',
       name: '',
       lastName: '',
