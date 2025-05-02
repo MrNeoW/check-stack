@@ -16,7 +16,7 @@ A TypeScript React frontend application
 
 To start the development server with hot-reload:
 ```bash
-npm run dev
+npm run start
 ```
 
 Runs the app in the development mode.\
