@@ -6,7 +6,7 @@ A TypeScript React frontend application
 
 1. Clone the repository : https://github.com/MrNeoW/check-stack.git
  - Make sure you are in the dev branch
- Have Node 18 and up
+ Have Node 18 and up installed
 2. Install dependencies:
    ```bash
    npm install
